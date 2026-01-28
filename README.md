@@ -1,68 +1,50 @@
-# miniburps 🍔
+# miniburps
 
-**miniburps** adalah suite *Mobile Penetration Testing* berbasis Python untuk Android (Termux) yang terinspirasi dari workflow Burp Suite. Alat ini dirancang ringan, modular, dan fokus pada pengujian manual tanpa ketergantungan sistem yang berat.
+**miniburps** adalah alat pentesting web sederhana untuk Android (Termux).
 
-Developed by **Isal0192**.
+Saya membuat tools ini karena merasa butuh cara yang praktis untuk melakukan analisis HTTP request secara manual langsung dari HP. Fitur-fiturnya terinspirasi dari workflow dasar Burp Suite, tapi dibuat seringan mungkin agar nyaman dijalankan di Termux tanpa bikin HP nge-lag.
 
-![Dashboard](https://via.placeholder.com/800x400?text=miniburps+Dashboard) 
-*(Screenshot placeholder)*
+**Dev:** Isal0192
 
-## 🚀 Fitur Utama
+## Fitur Saat Ini
 
-*   **Dashboard:** Profiling dan panduan cepat.
-*   **Proxy Interceptor:** Menangkap traffic HTTP/HTTPS secara real-time (powered by `mitmproxy`).
-*   **Repeater:** Edit & Resend request dengan editor canggih (Syntax Highlighting + Beautify).
-*   **Fuzzer (Intruder):** Brute-force parameter/direktori dengan wordlist bawaan atau kustom.
-*   **Decoder:** Encode/Decode (URL, Base64, Hex, HTML) & Hashing (SHA256).
+*   **Proxy:** Menangkap traffic HTTP/HTTPS (menggunakan engine `mitmproxy`).
+*   **Repeater:** Edit request, kirim ulang, dan lihat responnya (dilengkapi highlight warna agar mudah dibaca).
+*   **Fuzzer:** Untuk brute-force parameter atau mencari direktori tersembunyi. Bisa pakai wordlist bawaan atau punya sendiri.
+*   **Decoder:** Tools bantu untuk encode/decode URL, Base64, Hex, dan Hashing.
 
-## 📥 Instalasi Cepat (Termux)
+## Instalasi
 
-Salin dan jalankan perintah berikut di terminal Termux Anda:
+Cara paling gampang, copy-paste perintah ini di terminal Termux:
 
 ```bash
 curl -sL https://raw.githubusercontent.com/Isal0192/mini-burp/main/install.sh | bash
 ```
 
-## 🛠 Instalasi Manual
+Atau kalau mau install manual:
 
-Jika Anda lebih suka cara manual:
+1.  Clone repo ini: `git clone https://github.com/Isal0192/mini-burp.git`
+2.  Masuk folder: `cd mini-burp`
+3.  Install dependency: `pip install -r requirements.txt`
 
-1.  **Clone Repository:**
-    ```bash
-    git clone https://github.com/Isal0192/mini-burp.git
-    cd mini-burp
-    ```
+## Cara Pakai
 
-2.  **Jalankan Installer:**
-    ```bash
-    chmod +x install.sh
-    ./install.sh
-    ```
-
-## 🎮 Cara Penggunaan
+Tools ini terdiri dari dua bagian: Dashboard (Web UI) dan Proxy (Background Process).
 
 1.  **Jalankan Dashboard:**
-    Ketik perintah berikut untuk memulai web server:
-    ```bash
-    miniburps
-    ```
-    Buka browser dan akses: `http://127.0.0.1:5000`
+    Ketik `miniburps` di terminal.
+    Buka browser dan buka alamat: `http://127.0.0.1:5000`
 
 2.  **Jalankan Proxy:**
-    Buka sesi terminal baru (geser layar Termux dari kiri ke kanan -> New Session), lalu ketik:
-    ```bash
-    prx
-    ```
-    *   Set Wi-Fi Proxy HP Anda ke `127.0.0.1` port `8081`.
-    *   Kunjungi `mitm.it` untuk install sertifikat HTTPS.
+    Buka session baru di Termux, lalu ketik `prx`.
+    *   Setting WiFi HP: Proxy Manual ke `127.0.0.1` port `8081`.
+    *   Jangan lupa install sertifikat `mitm.it` kalau mau intercept HTTPS.
 
-## 🤝 Kontribusi
+## Catatan
 
-Pull requests dipersilakan. Untuk perubahan besar, harap buka issue terlebih dahulu untuk mendiskusikan apa yang ingin Anda ubah.
+Project ini masih aktif dikembangkan. Kalau nemu bug atau punya ide fitur yang sekiranya berguna buat pentesting di HP, silakan open issue atau kontak saya.
 
-## ⚠️ Disclaimer
-
-Alat ini dibuat untuk tujuan **edukasi dan pengujian keamanan etis** saja. Pengembang (Isal0192) tidak bertanggung jawab atas penyalahgunaan alat ini untuk menyerang target tanpa izin.
+Gunakan tools ini secara bijak dan hanya untuk tujuan edukasi atau testing sistem milik sendiri.
 
 ---
-© 2026 miniburps by Isal0192
+© 2026 Isal0192
