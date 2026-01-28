@@ -92,6 +92,14 @@
             <p>Advanced Mobile Penetration Testing Suite</p>
         </div>
 
+        <!-- Update Section -->
+        <div id="update-card" class="profile-card" style="border: 1px solid #3498db; display:none;">
+            <h3 style="margin-top:0;">✨ Update Available</h3>
+            <p>New version <strong id="remote-ver"></strong> is available (Current: <span id="local-ver"></span>).</p>
+            <button id="update-btn" class="scan-button" style="margin-top:10px; width:auto;">Update Now</button>
+            <p id="update-msg" style="margin-top:10px; font-size:0.9em;"></p>
+        </div>
+
         <!-- Profile Section -->
         <div class="profile-card">
             <h2>Developed by <span style="color: #27ae60;">Isal0192</span></h2>
@@ -138,5 +146,56 @@
             <p>&copy; 2026 miniburps. All rights reserved.</p>
         </div>
     </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            const updateCard = document.getElementById('update-card');
+            const localVerSpan = document.getElementById('local-ver');
+            const remoteVerSpan = document.getElementById('remote-ver');
+            const updateBtn = document.getElementById('update-btn');
+            const updateMsg = document.getElementById('update-msg');
+
+            // 1. Check for updates
+            try {
+                const res = await fetch('/check-update');
+                const data = await res.json();
+                
+                if (data.status === 'success' && data.update_available) {
+                    localVerSpan.textContent = data.local;
+                    remoteVerSpan.textContent = data.remote;
+                    updateCard.style.display = 'block'; // Show card only if update available
+                }
+            } catch (e) {
+                console.error("Failed to check updates:", e);
+            }
+
+            // 2. Handle Update Click
+            updateBtn.addEventListener('click', async () => {
+                updateBtn.disabled = true;
+                updateBtn.textContent = "Updating...";
+                updateMsg.textContent = "Pulling changes from GitHub...";
+                
+                try {
+                    const res = await fetch('/do-update', { method: 'POST' });
+                    const data = await res.json();
+                    
+                    if (data.status === 'success') {
+                        updateMsg.style.color = "green";
+                        updateMsg.textContent = data.message;
+                        updateBtn.textContent = "Done";
+                        setTimeout(() => location.reload(), 2000);
+                    } else {
+                        updateMsg.style.color = "red";
+                        updateMsg.textContent = data.message;
+                        updateBtn.disabled = false;
+                        updateBtn.textContent = "Retry Update";
+                    }
+                } catch (e) {
+                    updateMsg.textContent = "Error: " + e;
+                    updateBtn.disabled = false;
+                }
+            });
+        });
+    </script>
 </body>
 </html>

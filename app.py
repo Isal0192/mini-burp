@@ -8,6 +8,7 @@ import signal
 import json
 import sys
 import re
+import subprocess
 
 app = Flask(__name__)
 
@@ -17,6 +18,50 @@ APP_DIR = os.path.dirname(os.path.abspath(__file__))
 PROXY_LOG_FILE = os.path.join(APP_DIR, 'proxy_log.json')
 SUBDOMAINS_FILE = os.path.join(APP_DIR, 'subdomains.txt') # Keeping for now if needed later, or remove
 WORDLISTS_DIR = os.path.join(APP_DIR, 'wordlists')
+VERSION_FILE = os.path.join(APP_DIR, 'version.txt')
+GITHUB_VERSION_URL = "https://raw.githubusercontent.com/Isal0192/mini-burp/main/version.txt"
+
+# --- Update System Routes ---
+@app.route('/check-update')
+def check_update():
+    try:
+        # Get local version
+        local_version = "Unknown"
+        if os.path.exists(VERSION_FILE):
+            with open(VERSION_FILE, 'r') as f:
+                local_version = f.read().strip()
+        
+        # Get remote version
+        response = requests.get(GITHUB_VERSION_URL, timeout=5)
+        if response.status_code == 200:
+            remote_version = response.text.strip()
+            
+            # Simple string comparison (for now)
+            # In a real app, use semantic versioning parsing
+            update_available = remote_version != local_version
+            
+            return jsonify({
+                "status": "success",
+                "local": local_version,
+                "remote": remote_version,
+                "update_available": update_available
+            })
+        else:
+            return jsonify({"status": "error", "message": "Failed to fetch remote version."})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
+
+@app.route('/do-update', methods=['POST'])
+def do_update():
+    try:
+        # Run git pull
+        result = subprocess.run(['git', 'pull'], cwd=APP_DIR, capture_output=True, text=True)
+        if result.returncode == 0:
+            return jsonify({"status": "success", "message": "Update successful! Please restart miniburps."})
+        else:
+            return jsonify({"status": "error", "message": f"Git pull failed: {result.stderr}"})
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)})
 
 # --- Main App Routes ---
 @app.route('/')
