@@ -110,40 +110,41 @@
         </div>
 
         <!-- User Guide Section -->
-        <h2 style="text-align: center; border-bottom: none; margin-bottom: 20px;">Quick Start Guide</h2>
+        <h2 style="text-align: center; border-bottom: none; margin-bottom: 20px;">Panduan Singkat</h2>
         
         <div class="guide-grid">
             <!-- Proxy Guide -->
             <div class="guide-card">
                 <h3><span class="badge">1</span> Proxy Interceptor</h3>
-                <p>Start listening to traffic by running <code>prx</code> in your terminal.</p>
-                <p>Configure your phone's Wi-Fi proxy to <code>127.0.0.1:8081</code>. Capture requests in real-time and send interesting ones to Repeater.</p>
+                <p><strong>Cara Pakai:</strong> Buka sesi baru di Termux, ketik <code>prx</code>.</p>
+                <p><strong>Setting HP:</strong> Sambungkan WiFi ke Proxy Manual <code>127.0.0.1</code> port <code>8081</code>.</p>
+                <p><strong>Wajib:</strong> Buka <a href="http://mitm.it" target="_blank">mitm.it</a> di browser HP untuk install sertifikat agar bisa baca traffic HTTPS.</p>
             </div>
 
             <!-- Repeater Guide -->
             <div class="guide-card">
                 <h3><span class="badge">2</span> Repeater</h3>
-                <p>Manually modify HTTP requests. Change headers, parameters, or body content.</p>
-                <p>Analyze server responses with Syntax Highlighting and Beautify tools to find vulnerabilities.</p>
+                <p>Tempat untuk mengedit dan mengirim ulang request.</p>
+                <p><strong>Tips:</strong> Jika menemukan request menarik di Proxy, klik tombol "Send to Repeater" untuk membedahnya di sini.</p>
             </div>
 
             <!-- Fuzzer Guide -->
             <div class="guide-card">
                 <h3><span class="badge">3</span> Fuzzer</h3>
-                <p>Automate attacks using payloads. Mark injection points with <code>§</code>.</p>
-                <p>Use built-in wordlists (SQLi, XSS) or upload your own to brute-force parameters and directories.</p>
+                <p>Otomatisasi serangan (Brute Force).</p>
+                <p>Ganti bagian yang ingin diserang dengan tanda <code>§</code>. Contoh: <code>id=§1§</code>. Pilih wordlist bawaan atau upload file sendiri.</p>
             </div>
 
             <!-- Decoder Guide -->
             <div class="guide-card">
                 <h3><span class="badge">4</span> Decoder</h3>
-                <p>Utility tool for encoding/decoding data.</p>
-                <p>Supports URL, Base64, HTML Entities, and Hashing (SHA256). Useful for bypassing filters or analyzing tokens.</p>
+                <p>Alat bantu penerjemah kode.</p>
+                <p>Gunakan ini jika nemu parameter aneh seperti <code>%20</code> (URL) atau <code>SGVsbG8=</code> (Base64) untuk melihat isinya.</p>
             </div>
         </div>
 
         <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 0.8em;">
-            <p>&copy; 2026 miniburps. All rights reserved.</p>
+            <p>&copy; 2026 miniburps by Isal0192. All rights reserved.</p>
         </div>
     </main>
 

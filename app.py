@@ -10,11 +10,14 @@ import sys
 import re
 import subprocess
 
-app = Flask(__name__)
-
 # --- Absolute Path Configuration ---
 
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATE_DIR = os.path.join(APP_DIR, 'templates')
+STATIC_DIR = os.path.join(APP_DIR, 'static')
+
+app = Flask(__name__, template_folder=TEMPLATE_DIR, static_folder=STATIC_DIR)
+
 PROXY_LOG_FILE = os.path.join(APP_DIR, 'proxy_log.json')
 SUBDOMAINS_FILE = os.path.join(APP_DIR, 'subdomains.txt') # Keeping for now if needed later, or remove
 WORDLISTS_DIR = os.path.join(APP_DIR, 'wordlists')
