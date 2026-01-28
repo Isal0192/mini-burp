@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Web Bug Scanner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .hero-section {
+            text-align: center;
+            padding: 40px 20px;
+            background-color: #2c3e50;
+            color: white;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+        .hero-section h1 {
+            color: white;
+            margin-bottom: 10px;
+        }
+        .hero-section p {
+            font-size: 1.2em;
+            color: #ecf0f1;
+        }
+        .profile-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            text-align: center;
+            margin-bottom: 30px;
+            border: 1px solid #eee;
+        }
+        .profile-card h2 {
+            margin-top: 0;
+            border-bottom: none;
+            color: #2c3e50;
+        }
+        .guide-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .guide-card {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            transition: transform 0.2s;
+        }
+        .guide-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .guide-card h3 {
+            color: #e67e22; /* Accent color */
+            margin-top: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .badge {
+            background: #3498db;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.8em;
+            vertical-align: middle;
+        }
+        code {
+            background-color: #f1f2f6;
+            padding: 2px 5px;
+            border-radius: 4px;
+            font-family: monospace;
+            color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" style="background-color: #34495e;">Dashboard</a>
+        <a href="/proxy">Proxy</a>
+        <a href="/repeater">Repeater</a>
+        <a href="/fuzzer">Fuzzer</a>
+        <a href="/decoder">Decoder</a>
+    </nav>
+
+    <main class="container">
+        <!-- Hero / Welcome Section -->
+        <div class="hero-section">
+            <h1>miniburps</h1>
+            <p>Advanced Mobile Penetration Testing Suite</p>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="profile-card">
+            <h2>Developed by <span style="color: #27ae60;">Isal0192</span></h2>
+            <p>Security Researcher & Developer</p>
+            <p style="color: #7f8c8d; font-size: 0.9em;">
+                Built for professional manual testing on Android/Termux environments.
+            </p>
+        </div>
+
+        <!-- User Guide Section -->
+        <h2 style="text-align: center; border-bottom: none; margin-bottom: 20px;">Quick Start Guide</h2>
+        
+        <div class="guide-grid">
+            <!-- Proxy Guide -->
+            <div class="guide-card">
+                <h3><span class="badge">1</span> Proxy Interceptor</h3>
+                <p>Start listening to traffic by running <code>prx</code> in your terminal.</p>
+                <p>Configure your phone's Wi-Fi proxy to <code>127.0.0.1:8081</code>. Capture requests in real-time and send interesting ones to Repeater.</p>
+            </div>
+
+            <!-- Repeater Guide -->
+            <div class="guide-card">
+                <h3><span class="badge">2</span> Repeater</h3>
+                <p>Manually modify HTTP requests. Change headers, parameters, or body content.</p>
+                <p>Analyze server responses with Syntax Highlighting and Beautify tools to find vulnerabilities.</p>
+            </div>
+
+            <!-- Fuzzer Guide -->
+            <div class="guide-card">
+                <h3><span class="badge">3</span> Fuzzer</h3>
+                <p>Automate attacks using payloads. Mark injection points with <code>§</code>.</p>
+                <p>Use built-in wordlists (SQLi, XSS) or upload your own to brute-force parameters and directories.</p>
+            </div>
+
+            <!-- Decoder Guide -->
+            <div class="guide-card">
+                <h3><span class="badge">4</span> Decoder</h3>
+                <p>Utility tool for encoding/decoding data.</p>
+                <p>Supports URL, Base64, HTML Entities, and Hashing (SHA256). Useful for bypassing filters or analyzing tokens.</p>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 0.8em;">
+            <p>&copy; 2026 miniburps. All rights reserved.</p>
+        </div>
+    </main>
+</body>
+</html>

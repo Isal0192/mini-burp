@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Proxy - miniburps</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Additional styles for the proxy page are now in the main style.css */
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a>
+        <a href="/proxy" style="background-color: #34495e;">Proxy</a>
+        <a href="/repeater">Repeater</a>
+        <a href="/fuzzer">Fuzzer</a>
+        <a href="/decoder">Decoder</a>
+    </nav>
+    <div class="container">
+        <h1>Proxy Interceptor Log</h1>
+        
+        <!-- Filter Bar -->
+        <div class="filter-bar">
+            <input type="text" id="filter-input" placeholder="Filter URL (e.g. google.com, /api/login)...">
+            <select id="method-filter">
+                <option value="ALL">All Methods</option>
+                <option value="GET">GET</option>
+                <option value="POST">POST</option>
+                <option value="PUT">PUT</option>
+                <option value="DELETE">DELETE</option>
+                <option value="OPTIONS">OPTIONS</option>
+                <option value="HEAD">HEAD</option>
+            </select>
+            <button id="clear-logs" style="background-color: #e74c3c;">Clear Logs</button>
+        </div>
+
+        <div class="controls" style="display: none;">
+             <!-- Hidden controls -->
+        </div>
+        
+        <p style="font-size: 0.9em; color: #666; margin-bottom: 10px;">
+            Proxy must be started from the terminal (<code>prx</code> alias).
+        </p>
+        
+        <div class="table-container">
+            <table id="log-table">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>URL</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Log rows will be inserted here by JavaScript -->
+                </tbody>
+            </table>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 0.8em;">
+            <p>&copy; 2026 miniburps. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        const clearBtn = document.getElementById('clear-logs');
+        const logTableBody = document.querySelector("#log-table tbody");
+        const filterInput = document.getElementById('filter-input');
+        const methodFilter = document.getElementById('method-filter');
+
+        let logInterval;
+        let allLogs = []; // Store logs in memory for filtering
+
+        // Filter Logic
+        function applyFilters() {
+            const searchText = filterInput.value.toLowerCase();
+            const selectedMethod = methodFilter.value;
+            const rows = logTableBody.getElementsByTagName('tr');
+
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const methodCell = row.cells[0];
+                const urlCell = row.cells[1];
+                
+                if (!methodCell || !urlCell) continue;
+
+                const methodText = methodCell.textContent;
+                const urlText = urlCell.textContent.toLowerCase();
+
+                const matchesSearch = urlText.includes(searchText);
+                const matchesMethod = (selectedMethod === 'ALL' || methodText === selectedMethod);
+
+                if (matchesSearch && matchesMethod) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            }
+        }
+
+        // Add Event Listeners for Filtering
+        filterInput.addEventListener('input', applyFilters);
+        methodFilter.addEventListener('change', applyFilters);
+
+        clearBtn.addEventListener('click', async () => {
+            await fetch('/clear-proxy-logs', { method: 'POST' });
+            renderLogs([]);
+        });
+
+        function renderLogs(logs) {
+            allLogs = logs; // Update memory
+            logTableBody.innerHTML = ''; // Clear existing logs
+            
+            if (!logs || logs.length === 0) {
+                return;
+            }
+            
+            // Render logs in reverse order (newest first)
+            logs.slice().reverse().forEach(log => {
+                const row = document.createElement('tr');
+                
+                const methodCell = document.createElement('td');
+                methodCell.textContent = log.method;
+                // Color code methods
+                if (log.method === 'GET') methodCell.style.color = '#3498db';
+                if (log.method === 'POST') methodCell.style.color = '#e67e22';
+                if (log.method === 'DELETE') methodCell.style.color = '#c0392b';
+                methodCell.style.fontWeight = 'bold';
+                row.appendChild(methodCell);
+
+                const urlCell = document.createElement('td');
+                urlCell.textContent = log.url;
+                row.appendChild(urlCell);
+
+                const actionCell = document.createElement('td');
+                
+                // Repeater Button
+                const sendBtn = document.createElement('button');
+                sendBtn.textContent = 'Send to Repeater';
+                sendBtn.className = 'action-button';
+                sendBtn.onclick = () => {
+                    const url = new URL(log.url);
+                    let rawRequest = `${log.method} ${url.pathname}${url.search} HTTP/1.1\n`;
+                    rawRequest += `Host: ${url.hostname}\n`;
+                    for(const [key, value] of Object.entries(log.headers)) {
+                        if (key.toLowerCase() !== 'host') {
+                           rawRequest += `${key}: ${value}\n`;
+                        }
+                    }
+                    rawRequest += '\n';
+                    if (log.content) {
+                        rawRequest += log.content;
+                    }
+                    localStorage.setItem('repeater_raw_request', rawRequest);
+                    window.location.href = '/repeater';
+                };
+                actionCell.appendChild(sendBtn);
+                row.appendChild(actionCell);
+
+                logTableBody.appendChild(row);
+            });
+
+            // Re-apply filters after rendering new logs
+            applyFilters();
+        }
+
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/get-proxy-logs');
+                if (response.ok) {
+                    const logs = await response.json();
+                    // Simple check to avoid re-rendering if count is same (naive optimization)
+                    // Better would be to compare last ID, but this is fine for now
+                    if (logs.length !== allLogs.length) {
+                        renderLogs(logs);
+                    }
+                }
+            } catch (error) {
+                console.error("Error fetching logs:", error);
+            }
+        }
+
+        function startPolling() {
+            if (!logInterval) {
+                fetchLogs(); // Fetch immediately
+                logInterval = setInterval(fetchLogs, 2000); // Update every 2 seconds
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            startPolling();
+        });
+    </script>
+</body>
+</html>

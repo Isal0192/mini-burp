@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Repeater - miniburps</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- CodeMirror CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/theme/monokai.min.css">
+    
+    <!-- CodeMirror JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/http/http.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/htmlmixed/htmlmixed.min.js"></script>
+
+    <style>
+        .CodeMirror {
+            height: 300px; /* Adjust height */
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .controls-top {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+        .beautify-btn {
+            background-color: #9b59b6;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+        }
+        .beautify-btn:hover { background-color: #8e44ad; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a>
+        <a href="/proxy">Proxy</a>
+        <a href="/repeater" style="background-color: #34495e;">Repeater</a>
+        <a href="/fuzzer">Fuzzer</a>
+        <a href="/decoder">Decoder</a>
+    </nav>
+    <div class="container">
+        <h1>Request Repeater</h1>
+        
+        <form id="repeater-form" onsubmit="return false;">
+            <div class="form-group">
+                <div class="controls-top">
+                    <label for="raw-request" style="margin:0;">Raw HTTP Request</label>
+                    <!-- No beautify for raw request usually, as format matters, but can add later -->
+                </div>
+                <textarea id="raw-request" placeholder="GET / HTTP/1.1..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <button type="button" class="scan-button" id="send-single-btn" style="background-color: #3498db;">Send Request</button>
+                <button type="button" class="scan-button" id="send-to-fuzzer-btn" style="background-color: #f39c12;">Send to Fuzzer</button>
+            </div>
+        </form>
+
+        <div id="repeater-results">
+            <h2>Response</h2>
+            <div id="single-response-container">
+                <h3>Response Headers</h3>
+                <textarea id="response-headers-editor"></textarea>
+                
+                <div class="controls-top" style="margin-top: 15px;">
+                    <h3>Response Body</h3>
+                    <button class="beautify-btn" id="beautify-response-btn">Beautify (JSON/HTML)</button>
+                </div>
+                <textarea id="response-body-editor"></textarea>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 0.8em;">
+            <p>&copy; 2026 miniburps. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        // Initialize CodeMirror instances
+        var requestEditor, headersEditor, bodyEditor;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // Request Editor (HTTP mode)
+            requestEditor = CodeMirror.fromTextArea(document.getElementById('raw-request'), {
+                mode: 'http',
+                theme: 'default',
+                lineNumbers: true,
+                lineWrapping: true
+            });
+
+            // Headers Editor (HTTP mode, readonly-ish)
+            headersEditor = CodeMirror.fromTextArea(document.getElementById('response-headers-editor'), {
+                mode: 'http',
+                theme: 'default',
+                lineNumbers: true,
+                readOnly: true
+            });
+            headersEditor.setSize(null, 150); // Shorter height for headers
+
+            // Body Editor (Mixed mode - detects HTML/JS)
+            bodyEditor = CodeMirror.fromTextArea(document.getElementById('response-body-editor'), {
+                mode: 'htmlmixed',
+                theme: 'default',
+                lineNumbers: true,
+                lineWrapping: true
+            });
+
+            // Load saved request
+            const rawRequest = localStorage.getItem('repeater_raw_request');
+            if (rawRequest) {
+                requestEditor.setValue(rawRequest);
+            }
+        });
+
+        const singleSendBtn = document.getElementById('send-single-btn');
+        const sendToFuzzerBtn = document.getElementById('send-to-fuzzer-btn');
+        const singleResponseContainer = document.getElementById('single-response-container');
+        const beautifyBtn = document.getElementById('beautify-response-btn');
+
+        // Helper: Beautify function
+        function beautifyContent(content) {
+            // Try JSON
+            try {
+                const json = JSON.parse(content);
+                return JSON.stringify(json, null, 2);
+            } catch (e) {
+                // Not JSON, continue
+            }
+
+            // Simple HTML/XML indent (very basic regex approach)
+            // For robust HTML beautify, we'd need a heavy library. 
+            // Let's stick to JSON for now, or minimal XML logic.
+            // If it starts with <, we assume HTML/XML
+            if (content.trim().startsWith('<')) {
+                // Basic naive indentation
+                let formatted = '';
+                let pad = 0;
+                content.split(/>\s*</).forEach(function(node) {
+                    if (node.match( /^\/\w/ )) pad -= 1;
+                    formatted += new Array(pad + 1).join('  ') + '<' + node + '>\r\n';
+                    if (node.match( /^<?\w[^>]*[^\/]$/ )) pad += 1;
+                });
+                return formatted.trim(); // This is risky, but better than minified
+            }
+
+            return content;
+        }
+
+        beautifyBtn.addEventListener('click', () => {
+            const currentContent = bodyEditor.getValue();
+            const pretty = beautifyContent(currentContent);
+            bodyEditor.setValue(pretty);
+        });
+
+        sendToFuzzerBtn.addEventListener('click', () => {
+            const rawRequestValue = requestEditor.getValue();
+            if (rawRequestValue) {
+                localStorage.setItem('repeater_raw_request', rawRequestValue);
+                window.location.href = '/fuzzer?request=' + encodeURIComponent(rawRequestValue);
+            } else {
+                alert('Raw request is empty.');
+            }
+        });
+
+        singleSendBtn.addEventListener('click', async () => {
+            singleResponseContainer.style.display = 'block';
+            headersEditor.setValue('Sending...');
+            bodyEditor.setValue('');
+
+            const rawRequestValue = requestEditor.getValue();
+            localStorage.setItem('repeater_raw_request', rawRequestValue);
+
+            const payload = {
+                raw_request: rawRequestValue
+            };
+
+            try {
+                const response = await fetch('/send-single-request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    headersEditor.setValue(`Error: ${result.error}`);
+                    bodyEditor.setValue('');
+                    return;
+                }
+
+                let headersText = `HTTP/1.1 ${result.status_code}\n`;
+                for(const [key, value] of Object.entries(result.headers)) {
+                    headersText += `${key}: ${value}\n`;
+                }
+                headersEditor.setValue(headersText);
+                
+                // Set body (auto-detect mode if possible)
+                bodyEditor.setValue(result.body);
+                
+                // Try to guess mode
+                const contentType = result.headers['Content-Type'] || result.headers['content-type'] || '';
+                if (contentType.includes('json')) {
+                    bodyEditor.setOption('mode', 'javascript');
+                } else if (contentType.includes('html')) {
+                    bodyEditor.setOption('mode', 'htmlmixed');
+                } else if (contentType.includes('xml')) {
+                    bodyEditor.setOption('mode', 'xml');
+                }
+
+            } catch (e) {
+                headersEditor.setValue('Error sending request: ' + e);
+            }
+        });
+    </script>
+</body>
+</html>

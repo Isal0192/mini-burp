@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Decoder - miniburps</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    
+    <!-- CodeMirror -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/xml/xml.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.5/mode/htmlmixed/htmlmixed.min.js"></script>
+
+    <style>
+        .decoder-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        .io-box {
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #dfe6e9;
+        }
+        .CodeMirror {
+            height: 200px; /* Specific height for decoder */
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #ecf0f1;
+        }
+        .controls button, .controls select {
+            padding: 8px 12px;
+            border-radius: 4px;
+            border: 1px solid #bdc3c7;
+            cursor: pointer;
+        }
+        .controls button {
+            background-color: #34495e;
+            color: white;
+            border: none;
+        }
+        .controls button:hover { background-color: #2c3e50; }
+        
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .mini-btn {
+            font-size: 0.8em;
+            padding: 2px 5px;
+            background: #eee;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            color: #333;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Dashboard</a>
+        <a href="/proxy">Proxy</a>
+        <a href="/repeater">Repeater</a>
+        <a href="/fuzzer">Fuzzer</a>
+        <a href="/decoder" style="background-color: #34495e;">Decoder</a>
+    </nav>
+
+    <div class="container">
+        <h1>Decoder / Encoder</h1>
+        
+        <div class="decoder-container">
+            <!-- Input Box -->
+            <div class="io-box">
+                <label for="input-text">
+                    Input 
+                    <button class="mini-btn" id="beautify-input-btn">Beautify JSON/HTML</button>
+                </label>
+                <textarea id="input-text" placeholder="Type or paste text here..."></textarea>
+            </div>
+
+            <!-- Controls -->
+            <div class="controls">
+                <select id="operation-select">
+                    <option value="url">URL</option>
+                    <option value="base64">Base64</option>
+                    <option value="html">HTML Entities</option>
+                    <option value="hex">Hex</option>
+                </select>
+                <button id="encode-btn">Encode</button>
+                <button id="decode-btn">Decode</button>
+                <button id="smart-decode-btn" style="background-color: #e67e22;">Smart Decode</button>
+                <button id="hash-sha256-btn" style="background-color: #8e44ad;">SHA256 Hash</button>
+                <button id="clear-btn" style="background-color: #c0392b;">Clear</button>
+            </div>
+
+            <!-- Output Box -->
+            <div class="io-box">
+                <label for="output-text">Output</label>
+                <textarea id="output-text" placeholder="Result will appear here..."></textarea>
+            </div>
+        </div>
+
+        <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 0.8em;">
+            <p>&copy; 2026 miniburps. All rights reserved.</p>
+        </div>
+    </div>
+
+    <script>
+        var inputEditor, outputEditor;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            inputEditor = CodeMirror.fromTextArea(document.getElementById('input-text'), {
+                mode: 'htmlmixed', // default generic mode
+                lineNumbers: true,
+                lineWrapping: true
+            });
+            
+            outputEditor = CodeMirror.fromTextArea(document.getElementById('output-text'), {
+                mode: 'htmlmixed',
+                lineNumbers: true,
+                lineWrapping: true,
+                readOnly: true // Output mostly read-only, but editable if needed
+            });
+        });
+
+        const operationSelect = document.getElementById('operation-select');
+
+        // Helper: Convert string to Hex
+        function toHex(str) {
+            let result = '';
+            for (let i = 0; i < str.length; i++) {
+                result += str.charCodeAt(i).toString(16);
+            }
+            return result;
+        }
+
+        // Helper: Convert Hex to string
+        function fromHex(hex) {
+            let str = '';
+            for (let i = 0; i < hex.length; i += 2) {
+                str += String.fromCharCode(parseInt(hex.substr(i, 2), 16));
+            }
+            return str;
+        }
+
+        // Helper: Hashing
+        async function hashString(str, algo) {
+            const msgBuffer = new TextEncoder().encode(str);
+            const hashBuffer = await crypto.subtle.digest(algo, msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Helper: Beautify
+        function beautifyContent(content) {
+            try {
+                const json = JSON.parse(content);
+                return JSON.stringify(json, null, 2);
+            } catch (e) {
+                // Not JSON
+            }
+            // Basic HTML Indent
+            if (content.trim().startsWith('<')) {
+                let formatted = '';
+                let pad = 0;
+                content.split(/>\s*</).forEach(function(node) {
+                    if (node.match( /^\/\w/ )) pad -= 1;
+                    formatted += new Array(pad + 1).join('  ') + '<' + node + '>\r\n';
+                    if (node.match( /^<?\w[^>]*[^\/]$/ )) pad += 1;
+                });
+                return formatted.trim();
+            }
+            return content;
+        }
+
+        document.getElementById('beautify-input-btn').addEventListener('click', () => {
+            const val = inputEditor.getValue();
+            inputEditor.setValue(beautifyContent(val));
+        });
+
+        document.getElementById('encode-btn').addEventListener('click', () => {
+            const val = inputEditor.getValue();
+            const op = operationSelect.value;
+            let res = '';
+            try {
+                if (op === 'url') res = encodeURIComponent(val);
+                else if (op === 'base64') res = btoa(val);
+                else if (op === 'html') res = val.replace(/[ -\u9999<>\]/g, i => '&#'+i.charCodeAt(0)+';');
+                else if (op === 'hex') res = toHex(val);
+            } catch (e) { res = "Error: " + e.message; }
+            outputEditor.setValue(res);
+        });
+
+        document.getElementById('decode-btn').addEventListener('click', () => {
+            const val = inputEditor.getValue();
+            const op = operationSelect.value;
+            let res = '';
+            try {
+                if (op === 'url') res = decodeURIComponent(val);
+                else if (op === 'base64') res = atob(val);
+                else if (op === 'html') {
+                    const doc = new DOMParser().parseFromString(val, "text/html");
+                    res = doc.documentElement.textContent;
+                }
+                else if (op === 'hex') res = fromHex(val);
+            } catch (e) { res = "Error: " + e.message; }
+            outputEditor.setValue(res);
+        });
+
+        document.getElementById('smart-decode-btn').addEventListener('click', () => {
+            let val = inputEditor.getValue();
+            let log = "Smart Decode Log:\n";
+            try {
+                if (val.includes('%')) {
+                    val = decodeURIComponent(val);
+                    log += "-> URL Decoded\n";
+                }
+            } catch(e) {}
+            try {
+                if (/^[A-Za-z0-9+/=]+$/.test(val.trim())) {
+                    let decoded = atob(val.trim());
+                    if (decoded.length > 0) {
+                        val = decoded;
+                        log += "-> Base64 Decoded\n";
+                    }
+                }
+            } catch(e) {}
+            outputEditor.setValue(val + "\n\n" + "---" + "\n" + log);
+        });
+
+        document.getElementById('hash-sha256-btn').addEventListener('click', async () => {
+             outputEditor.setValue(await hashString(inputEditor.getValue(), 'SHA-256'));
+        });
+
+        document.getElementById('clear-btn').addEventListener('click', () => {
+            inputEditor.setValue('');
+            outputEditor.setValue('');
+        });
+    </script>
+</body>
+</html>
