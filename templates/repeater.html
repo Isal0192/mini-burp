@@ -51,6 +51,16 @@
     </nav>
     <div class="container">
         <h1>Request Repeater</h1>
+
+        <button type="button" id="toggle-curl-btn" class="beautify-btn" style="margin-bottom: 10px; background-color: #2c3e50; width: 100%;">+ Import from cURL</button>
+
+        <div id="curl-import-container" class="form-group" style="display: none; border: 1px dashed #ccc; padding: 10px; border-radius: 5px;">
+            <div class="controls-top">
+                <label for="curl-input" style="margin:0;">Paste cURL Command</label>
+                <button type="button" class="beautify-btn" id="import-curl-btn" style="background-color: #2ecc71;">Process Import</button>
+            </div>
+            <textarea id="curl-input" placeholder="Paste your cURL command here..."></textarea>
+        </div>
         
         <form id="repeater-form" onsubmit="return false;">
             <div class="form-group">
@@ -89,8 +99,19 @@
     <script>
         // Initialize CodeMirror instances
         var requestEditor, headersEditor, bodyEditor;
+        var curlInputEditor;
 
         document.addEventListener('DOMContentLoaded', () => {
+            // cURL Input Editor
+            curlInputEditor = CodeMirror.fromTextArea(document.getElementById('curl-input'), {
+                mode: 'shell', // Using shell mode for cURL commands might be okay
+                theme: 'default',
+                lineNumbers: true,
+                lineWrapping: true,
+                height: 100 // Shorter height
+            });
+            curlInputEditor.setSize(null, 100);
+
             // Request Editor (HTTP mode)
             requestEditor = CodeMirror.fromTextArea(document.getElementById('raw-request'), {
                 mode: 'http',
@@ -127,6 +148,23 @@
         const sendToFuzzerBtn = document.getElementById('send-to-fuzzer-btn');
         const singleResponseContainer = document.getElementById('single-response-container');
         const beautifyBtn = document.getElementById('beautify-response-btn');
+        const importCurlBtn = document.getElementById('import-curl-btn');
+        const toggleCurlBtn = document.getElementById('toggle-curl-btn');
+        const curlImportContainer = document.getElementById('curl-import-container');
+
+        toggleCurlBtn.addEventListener('click', () => {
+            if (curlImportContainer.style.display === 'none') {
+                curlImportContainer.style.display = 'block';
+                toggleCurlBtn.textContent = '- Hide cURL Import';
+                // Refresh CodeMirror to ensure it renders correctly when unhidden
+                if (curlInputEditor) {
+                    curlInputEditor.refresh();
+                }
+            } else {
+                curlImportContainer.style.display = 'none';
+                toggleCurlBtn.textContent = '+ Import from cURL';
+            }
+        });
 
         // Helper: Beautify function
         function beautifyContent(content) {
@@ -170,6 +208,34 @@
                 window.location.href = '/fuzzer?request=' + encodeURIComponent(rawRequestValue);
             } else {
                 alert('Raw request is empty.');
+            }
+        });
+
+        importCurlBtn.addEventListener('click', async () => {
+            const curlCommand = curlInputEditor.getValue();
+            if (!curlCommand) {
+                alert('Please paste a cURL command into the textarea.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/parse-curl', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ curl_command: curlCommand })
+                });
+
+                const result = await response.json();
+
+                if (result.error) {
+                    alert('Error parsing cURL: ' + result.error);
+                    return;
+                }
+
+                requestEditor.setValue(result.raw_request);
+                curlInputEditor.setValue(''); // Clear cURL input after successful import
+            } catch (e) {
+                alert('Error communicating with server: ' + e);
             }
         });
 

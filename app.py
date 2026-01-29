@@ -105,10 +105,119 @@ def clear_proxy_logs():
     except IOError as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+def _parse_curl_command(curl_command):
+    method = "GET"
+    url = ""
+    headers = {}
+    data = None
+    
+    # Remove 'curl ' prefix if present
+    if curl_command.strip().startswith("curl "):
+        curl_command = curl_command.strip()[5:].strip()
+
+    # Split command by spaces, respecting quotes
+    import shlex
+    try:
+        parts = shlex.split(curl_command)
+    except ValueError as e:
+        return None, None, None, None, {"error": f"Error parsing cURL command: {e}"}
+
+    i = 0
+    while i < len(parts):
+        part = parts[i]
+        if part == "-X" or part == "--request":
+            if i + 1 < len(parts):
+                method = parts[i+1].upper()
+                i += 1
+        elif part == "-H" or part == "--header":
+            if i + 1 < len(parts):
+                header_pair = parts[i+1]
+                if ':' in header_pair:
+                    key, value = header_pair.split(':', 1)
+                    headers[key.strip()] = value.strip()
+                i += 1
+        elif part == "-d" or part.startswith("--data"):
+            if i + 1 < len(parts):
+                data = parts[i+1]
+                # If method is still GET and data is present, assume POST
+                if method == "GET":
+                    method = "POST"
+                i += 1
+            else: # If -d or --data is last argument
+                data = ""
+                if method == "GET":
+                    method = "POST"
+        elif not part.startswith('-'): # Assume it's the URL
+            # Only set URL if not already set, or if it looks more like a URL
+            # This prioritizes the last non-flag argument as URL
+            if not url or part.startswith('http'):
+                url = part
+        i += 1
+
+    # If data is present and Content-Type is not set, set to application/x-www-form-urlencoded
+    if data and method == "POST" and "Content-Type" not in headers and "content-type" not in headers:
+        headers["Content-Type"] = "application/x-www-form-urlencoded"
+        # Check if data looks like JSON, if so, change Content-Type
+        try:
+            json.loads(data)
+            headers["Content-Type"] = "application/json"
+        except (json.JSONDecodeError, TypeError):
+            pass # Not JSON, keep as form-urlencoded or whatever was set
+
+    if not url:
+        return None, None, None, None, {"error": "URL not found in cURL command."}
+
+    return method, url, headers, data, None
+
+@app.route('/parse-curl', methods=['POST'])
+def parse_curl_command_route():
+    data = request.get_json()
+    curl_command = data.get('curl_command')
+
+    if not curl_command:
+        return jsonify({"error": "cURL command is missing."}), 400
+
+    method, url, headers, body, error = _parse_curl_command(curl_command)
+
+    if error:
+        return jsonify(error), 400
+
+    # Construct raw HTTP request string
+    request_lines = [f"{method} {url} HTTP/1.1"]
+    
+    # Automatically add Host header if not already present
+    host_header_present = False
+    for k in headers:
+        if k.lower() == 'host':
+            host_header_present = True
+            break
+            
+    if not host_header_present:
+        try:
+            from urllib.parse import urlparse
+            parsed_url = urlparse(url)
+            if parsed_url.netloc:
+                request_lines.append(f"Host: {parsed_url.netloc}")
+        except Exception as e:
+            print(f"Error parsing URL for Host header: {e}", file=sys.stderr)
+            # If URL parsing fails, don't add Host header, let the user manually add if needed
+
+    for key, value in headers.items():
+        request_lines.append(f"{key}: {value}")
+
+    raw_request = "\n".join(request_lines)
+    if body:
+        raw_request += f"\n\n{body}"
+    else:
+        raw_request += "\n\n" # Ensure there's a double newline even for no body
+
+    return jsonify({"raw_request": raw_request})
+
 # --- Repeater Routes ---
 @app.route('/repeater')
 def repeater_page():
     return render_template('repeater.html')
+
 
 # --- Fuzzer Routes ---
 @app.route('/fuzzer')
